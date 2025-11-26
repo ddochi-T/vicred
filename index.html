@@ -15,10 +15,27 @@
         // Firestore 로깅 활성화 (디버깅용)
         setLogLevel('Debug');
 
-        // 전역 변수 설정 (Canvas 환경에서 제공됨)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        // =========================================================================================
+        // 🚨 중요: 깃허브/외부 웹사이트에 배포 시 아래 CONFIG를 Firebase Console에서 복사하여 붙여넣으세요.
+        // -----------------------------------------------------------------------------------------
+        const MANUAL_FIREBASE_CONFIG = {
+            apiKey: "여기에_복사한_apiKey를_붙여넣으세요", // 실제 키로 변경 필요
+            authDomain: "여기에_복사한_authDomain을_붙여넣으세요", // 실제 도메인으로 변경 필요
+            projectId: "여기에_복사한_projectId를_붙여넣으세요", // 실제 프로젝트 ID로 변경 필요 (가장 중요)
+            storageBucket: "여기에_복사한_storageBucket을_붙여넣으세요",
+            messagingSenderId: "여기에_복사한_messagingSenderId를_붙여넣으세요",
+            appId: "여기에_복사한_appId를_붙여넣으세요"
+        };
+        // =========================================================================================
+        
+        // Canvas 환경 변수 로딩
+        const canvasAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const canvasFirebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // 최종 CONFIG 결정: Canvas 환경이 우선하며, 없으면 수동 CONFIG를 사용
+        const firebaseConfig = canvasFirebaseConfig || (MANUAL_FIREBASE_CONFIG.projectId !== "YOUR_PROJECT_ID" ? MANUAL_FIREBASE_CONFIG : null);
+        const appId = canvasFirebaseConfig ? canvasAppId : (firebaseConfig?.projectId || 'default-app-id');
 
         // 관리자 비밀번호 설정
         const ADMIN_PASSWORD = '2025dudtls!!'; 
@@ -40,7 +57,7 @@
         // 1. Firebase 초기화 및 인증
         const initializeFirebase = async () => {
             if (!firebaseConfig) {
-                console.error("Firebase Configuration is missing.");
+                console.error("Firebase Configuration is missing. Please update MANUAL_FIREBASE_CONFIG for external hosting.");
                 return;
             }
 
@@ -53,6 +70,7 @@
                     await setPersistence(auth, browserLocalPersistence);
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
+                    // 외부 배포 시 익명 인증을 사용
                     await signInAnonymously(auth);
                 }
             } catch (error) {
@@ -139,7 +157,6 @@
 
         // 4. Firestore에서 데이터 로드 (실시간 리스너)
         const loadData = (uid) => {
-            // FIX: Invalid collection reference 오류 해결을 위해 경로 수정
             const teamCollectionRef = collection(db, `artifacts/${appId}/users/${uid}/teams`);
 
             onSnapshot(teamCollectionRef, (snapshot) => {
@@ -160,7 +177,6 @@
 
         // 5. 초기 팀 데이터 설정
         const initializeTeams = async (uid) => {
-            // FIX: Invalid collection reference 오류 해결을 위해 경로 수정
             const teamCollectionRef = collection(db, `artifacts/${appId}/users/${uid}/teams`);
             
             const snapshot = await getDocs(teamCollectionRef);
@@ -174,7 +190,6 @@
 
         // 6. 경기 결과 기록
         const recordMatch = async (winnerId, loserId, winSets, loseSets) => {
-            // FIX: Invalid collection reference 오류 해결을 위해 경로 수정
             const winnerRef = doc(db, `artifacts/${appId}/users/${userId}/teams/${winnerId}`);
             const loserRef = doc(db, `artifacts/${appId}/users/${userId}/teams/${loserId}`);
             
